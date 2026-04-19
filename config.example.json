@@ -1,7 +1,7 @@
 {
     "interfaces": ["ens256"],
     "capture_dir": "/pcaps",
-    "max_file_size_gb": 1,
+    "max_file_size_mb": 1024,
     "bpf_filter": "",
     "snap_len": 0,
     "s3": {

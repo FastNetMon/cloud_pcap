@@ -24,7 +24,7 @@ func runCapture(cfg *Config) error {
 		return fmt.Errorf("create capture directory: %w", err)
 	}
 
-	maxBytes := int64(cfg.MaxFileSizeGB * 1024 * 1024 * 1024)
+	maxBytes := int64(cfg.MaxFileSizeMB) * 1024 * 1024
 
 	ctx := &captureContext{
 		cfg:      cfg,
@@ -134,7 +134,7 @@ func (c *captureContext) captureLoop(iface string) {
 			return
 		}
 
-		log.Printf("[%s] File reached %.2f GB, rotating", iface, c.cfg.MaxFileSizeGB)
+		log.Printf("[%s] File reached %d MB, rotating", iface, c.cfg.MaxFileSizeMB)
 		c.processFile(iface, pcapFile)
 	}
 }

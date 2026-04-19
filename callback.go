@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -32,8 +33,11 @@ func compressAndUpload(cfg *Config, pcapPath string) error {
 	}
 	compressedPath := pcapPath + ".bz2"
 
-	// Upload to S3
-	key := cfg.S3.Prefix + filepath.Base(compressedPath)
+	// Upload to S3 with year/month/day folder structure
+	now := time.Now().UTC()
+	key := fmt.Sprintf("%s%d/%02d/%02d/%s",
+		cfg.S3.Prefix, now.Year(), now.Month(), now.Day(),
+		filepath.Base(compressedPath))
 	log.Printf("Uploading to s3://%s/%s", cfg.S3.Bucket, key)
 	if err := uploadToS3(cfg, compressedPath, key); err != nil {
 		return fmt.Errorf("upload failed (file kept at %s): %w", compressedPath, err)

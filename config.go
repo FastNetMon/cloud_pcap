@@ -18,7 +18,7 @@ type S3Config struct {
 type Config struct {
 	Interfaces        []string `json:"interfaces"`
 	CaptureDir        string   `json:"capture_dir"`
-	MaxFileSizeGB     float64  `json:"max_file_size_gb"`
+	MaxFileSizeMB     int      `json:"max_file_size_mb"`
 	BPFFilter         string   `json:"bpf_filter"`
 	SnapLen           int      `json:"snap_len"`
 	S3                S3Config `json:"s3"`
@@ -42,8 +42,8 @@ func LoadConfig(path string) (*Config, error) {
 	if cfg.CaptureDir == "" {
 		cfg.CaptureDir = "/pcaps"
 	}
-	if cfg.MaxFileSizeGB <= 0 {
-		cfg.MaxFileSizeGB = 1
+	if cfg.MaxFileSizeMB <= 0 {
+		cfg.MaxFileSizeMB = 1024
 	}
 	if cfg.S3.Endpoint == "" {
 		return nil, fmt.Errorf("s3.endpoint is required")

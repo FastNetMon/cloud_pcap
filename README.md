@@ -23,7 +23,7 @@ Copy `config.example.json` to `config.json` and edit:
 {
     "interfaces": ["ens256", "ens224"],
     "capture_dir": "/pcaps",
-    "max_file_size_gb": 1,
+    "max_file_size_mb": 1024,
     "bpf_filter": "",
     "snap_len": 0,
     "s3": {
@@ -44,7 +44,7 @@ Copy `config.example.json` to `config.json` and edit:
 |---|---|---|
 | `interfaces` | Network interfaces to capture | *(required)* |
 | `capture_dir` | Directory for pcap files | `/pcaps` |
-| `max_file_size_gb` | Rotate when pcap file reaches this size in GB | `1` |
+| `max_file_size_mb` | Rotate when pcap file reaches this size in MB | `1024` |
 | `bpf_filter` | BPF filter expression (e.g. `"tcp port 80"`) | *(none)* |
 | `snap_len` | Snapshot length in bytes (0 = default 262144) | `0` |
 | `s3.endpoint` | S3-compatible endpoint host | *(required)* |
@@ -64,7 +64,7 @@ sudo ./cloud_pcap --config config.json
 
 The tool will:
 1. Start `tcpdump` on each configured interface
-2. Monitor capture file size, rotate when it reaches `max_file_size_gb`
+2. Monitor capture file size, rotate when it reaches `max_file_size_mb`
 3. Compress completed files with `bzip2`
 4. Upload `.pcap.bz2` files to S3
 5. Optionally delete local files after successful upload
