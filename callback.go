@@ -1,0 +1,92 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+)
+
+func compressAndUpload(cfg *Config, pcapPath string) error {
+	pcapPath = filepath.Clean(pcapPath)
+
+	log.Printf("Processing %s", pcapPath)
+
+	if _, err := os.Stat(pcapPath); err != nil {
+		return fmt.Errorf("pcap file not found: %w", err)
+	}
+
+	// Compress with bzip2 (replaces original file with .bz2)
+	log.Printf("Compressing %s", pcapPath)
+	bzipCmd := exec.Command("bzip2", pcapPath)
+	if out, err := bzipCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("bzip2 failed: %s: %w", string(out), err)
+	}
+	compressedPath := pcapPath + ".bz2"
+
+	// Upload to S3
+	key := cfg.S3.Prefix + filepath.Base(compressedPath)
+	log.Printf("Uploading to s3://%s/%s", cfg.S3.Bucket, key)
+	if err := uploadToS3(cfg, compressedPath, key); err != nil {
+		return fmt.Errorf("upload failed (file kept at %s): %w", compressedPath, err)
+	}
+
+	log.Printf("Upload complete: %s", filepath.Base(compressedPath))
+
+	if cfg.DeleteAfterUpload {
+		if err := os.Remove(compressedPath); err != nil {
+			log.Printf("WARNING: failed to delete %s: %v", compressedPath, err)
+		}
+	}
+
+	return nil
+}
+
+func uploadToS3(cfg *Config, filePath, key string) error {
+	ctx := context.Background()
+
+	sdkCfg, err := awsconfig.LoadDefaultConfig(ctx,
+		awsconfig.WithRegion(cfg.S3.Region),
+		awsconfig.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(
+				cfg.S3.AccessKeyID,
+				cfg.S3.SecretAccessKey,
+				"",
+			),
+		),
+	)
+	if err != nil {
+		return fmt.Errorf("load AWS config: %w", err)
+	}
+
+	client := s3.NewFromConfig(sdkCfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String("https://" + cfg.S3.Endpoint)
+		o.UsePathStyle = true
+	})
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("open file: %w", err)
+	}
+	defer file.Close()
+
+	tm := transfermanager.New(client)
+	_, err = tm.UploadObject(ctx, &transfermanager.UploadObjectInput{
+		Bucket: aws.String(cfg.S3.Bucket),
+		Key:    aws.String(key),
+		Body:   file,
+	})
+	if err != nil {
+		return fmt.Errorf("s3 upload: %w", err)
+	}
+
+	return nil
+}
