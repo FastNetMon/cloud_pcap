@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            deb_arch: amd64
+          - goos: linux
+            goarch: arm64
+            deb_arch: arm64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          BINARY_NAME=cloud_pcap-${{ matrix.goos }}-${{ matrix.goarch }}
+          go build -trimpath -ldflags="-s -w -X main.version=${{ github.ref_name }}" -o "${BINARY_NAME}" .
+
+      - name: Build deb package
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          ARCH="${{ matrix.deb_arch }}"
+          PKG_DIR="cloud-pcap_${VERSION}_${ARCH}"
+
+          mkdir -p "${PKG_DIR}/DEBIAN"
+          mkdir -p "${PKG_DIR}/usr/bin"
+          mkdir -p "${PKG_DIR}/etc/cloud_pcap"
+          mkdir -p "${PKG_DIR}/lib/systemd/system"
+
+          cp cloud_pcap-${{ matrix.goos }}-${{ matrix.goarch }} "${PKG_DIR}/usr/bin/cloud_pcap"
+          chmod 755 "${PKG_DIR}/usr/bin/cloud_pcap"
+
+          cp config.example.json "${PKG_DIR}/etc/cloud_pcap/config.json"
+          cp dist/cloud_pcap.service "${PKG_DIR}/lib/systemd/system/cloud_pcap.service"
+
+          cat > "${PKG_DIR}/DEBIAN/control" << EOF
+          Package: cloud-pcap
+          Version: ${VERSION}
+          Architecture: ${ARCH}
+          Maintainer: cloud_pcap maintainers
+          Depends: tcpdump, bzip2
+          Description: Network packet capture with S3 upload
+           Captures traffic with tcpdump, compresses with bzip2,
+           and uploads to S3-compatible storage (Backblaze B2).
+          EOF
+          # Remove leading whitespace from heredoc (created by YAML indentation)
+          sed -i 's/^          //' "${PKG_DIR}/DEBIAN/control"
+
+          cat > "${PKG_DIR}/DEBIAN/conffiles" << EOF
+          /etc/cloud_pcap/config.json
+          EOF
+          sed -i 's/^          //' "${PKG_DIR}/DEBIAN/conffiles"
+
+          dpkg-deb --build --root-owner-group "${PKG_DIR}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cloud_pcap-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            cloud_pcap-${{ matrix.goos }}-${{ matrix.goarch }}
+            cloud-pcap_*.deb
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/*

@@ -1,0 +1,12 @@
+[Unit]
+Description=Cloud PCAP Capture
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/cloud_pcap --config /etc/cloud_pcap/config.json
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
