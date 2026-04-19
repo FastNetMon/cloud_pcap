@@ -29,7 +29,7 @@ Copy `config.example.json` to `config.json` and edit:
     "s3": {
         "endpoint": "s3.eu-central-003.backblazeb2.com",
         "region": "eu-central-003",
-        "bucket": "ucom-traffic",
+        "bucket": "company-name-traffic",
         "prefix": "traffic/",
         "access_key_id": "YOUR_KEY",
         "secret_access_key": "YOUR_SECRET"
