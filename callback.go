@@ -67,8 +67,12 @@ func compressAndUpload(cfg *Config, pcapPath string) error {
 }
 
 func formatCompressionStats(originalName, compressedName string, originalSize, compressedSize int64) string {
-	if originalSize == 0 || compressedSize == 0 {
-		return fmt.Sprintf("%s -> %s (%d bytes -> %d bytes, ratio unavailable)", originalName, compressedName, originalSize, compressedSize)
+	if originalSize == 0 {
+		return fmt.Sprintf("%s -> %s (%d bytes -> %d bytes, ratio unavailable: empty input file)", originalName, compressedName, originalSize, compressedSize)
+	}
+
+	if compressedSize == 0 {
+		return fmt.Sprintf("%s -> %s (%d bytes -> %d bytes, ratio unavailable: empty compressed file)", originalName, compressedName, originalSize, compressedSize)
 	}
 
 	return fmt.Sprintf("%s -> %s (%d bytes -> %d bytes, ratio %.2f:1)", originalName, compressedName, originalSize, compressedSize, float64(originalSize)/float64(compressedSize))
