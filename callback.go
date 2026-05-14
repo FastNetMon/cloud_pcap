@@ -21,7 +21,8 @@ func compressAndUpload(cfg *Config, pcapPath string) error {
 
 	log.Printf("Processing %s", pcapPath)
 
-	if _, err := os.Stat(pcapPath); err != nil {
+	originalInfo, err := os.Stat(pcapPath)
+	if err != nil {
 		return fmt.Errorf("pcap file not found: %w", err)
 	}
 
@@ -32,6 +33,11 @@ func compressAndUpload(cfg *Config, pcapPath string) error {
 		return fmt.Errorf("bzip2 failed: %s: %w", string(out), err)
 	}
 	compressedPath := pcapPath + ".bz2"
+	compressedInfo, err := os.Stat(compressedPath)
+	if err != nil {
+		return fmt.Errorf("stat compressed file: %w", err)
+	}
+	log.Printf("Compression complete: %s", formatCompressionStats(filepath.Base(pcapPath), filepath.Base(compressedPath), originalInfo.Size(), compressedInfo.Size()))
 
 	// Upload to S3 with year/month/day folder structure
 	now := time.Now().UTC()
@@ -52,6 +58,14 @@ func compressAndUpload(cfg *Config, pcapPath string) error {
 	}
 
 	return nil
+}
+
+func formatCompressionStats(originalName, compressedName string, originalSize, compressedSize int64) string {
+	if compressedSize <= 0 {
+		return fmt.Sprintf("%s -> %s (%d bytes -> %d bytes, ratio unavailable)", originalName, compressedName, originalSize, compressedSize)
+	}
+
+	return fmt.Sprintf("%s -> %s (%d bytes -> %d bytes, ratio %.2f:1)", originalName, compressedName, originalSize, compressedSize, float64(originalSize)/float64(compressedSize))
 }
 
 func uploadToS3(cfg *Config, filePath, key string) error {
