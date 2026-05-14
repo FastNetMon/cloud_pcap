@@ -37,7 +37,13 @@ func compressAndUpload(cfg *Config, pcapPath string) error {
 	if err != nil {
 		return fmt.Errorf("stat compressed file: %w", err)
 	}
-	log.Printf("Compression complete: %s", formatCompressionStats(filepath.Base(pcapPath), filepath.Base(compressedPath), originalInfo.Size(), compressedInfo.Size()))
+	compressionStats := formatCompressionStats(
+		filepath.Base(pcapPath),
+		filepath.Base(compressedPath),
+		originalInfo.Size(),
+		compressedInfo.Size(),
+	)
+	log.Printf("Compression complete: %s", compressionStats)
 
 	// Upload to S3 with year/month/day folder structure
 	now := time.Now().UTC()
@@ -61,7 +67,7 @@ func compressAndUpload(cfg *Config, pcapPath string) error {
 }
 
 func formatCompressionStats(originalName, compressedName string, originalSize, compressedSize int64) string {
-	if compressedSize == 0 {
+	if originalSize == 0 || compressedSize == 0 {
 		return fmt.Sprintf("%s -> %s (%d bytes -> %d bytes, ratio unavailable)", originalName, compressedName, originalSize, compressedSize)
 	}
 

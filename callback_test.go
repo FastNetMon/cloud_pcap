@@ -18,4 +18,12 @@ func TestFormatCompressionStats(t *testing.T) {
 			t.Fatalf("formatCompressionStats() = %q, want %q", got, want)
 		}
 	})
+
+	t.Run("handles zero original size", func(t *testing.T) {
+		got := formatCompressionStats("capture.pcap", "capture.pcap.bz2", 0, 128)
+		want := "capture.pcap -> capture.pcap.bz2 (0 bytes -> 128 bytes, ratio unavailable)"
+		if got != want {
+			t.Fatalf("formatCompressionStats() = %q, want %q", got, want)
+		}
+	})
 }
