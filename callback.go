@@ -67,15 +67,17 @@ func compressAndUpload(cfg *Config, pcapPath string) error {
 }
 
 func formatCompressionStats(originalName, compressedName string, originalSize, compressedSize int64) string {
+	ratioText := "ratio unavailable"
+
 	if originalSize == 0 {
-		return fmt.Sprintf("%s -> %s (%d bytes -> %d bytes, ratio unavailable: empty input file)", originalName, compressedName, originalSize, compressedSize)
+		ratioText = "ratio unavailable: empty input file"
+	} else if compressedSize == 0 {
+		ratioText = "ratio unavailable: empty compressed file"
+	} else {
+		ratioText = fmt.Sprintf("ratio %.2f:1", float64(originalSize)/float64(compressedSize))
 	}
 
-	if compressedSize == 0 {
-		return fmt.Sprintf("%s -> %s (%d bytes -> %d bytes, ratio unavailable: empty compressed file)", originalName, compressedName, originalSize, compressedSize)
-	}
-
-	return fmt.Sprintf("%s -> %s (%d bytes -> %d bytes, ratio %.2f:1)", originalName, compressedName, originalSize, compressedSize, float64(originalSize)/float64(compressedSize))
+	return fmt.Sprintf("%s -> %s (%d bytes -> %d bytes, %s)", originalName, compressedName, originalSize, compressedSize, ratioText)
 }
 
 func uploadToS3(cfg *Config, filePath, key string) error {
